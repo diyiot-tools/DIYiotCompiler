@@ -12,7 +12,7 @@ $app = new \Slim\Slim();
 $app->config('debug', true);
 
 //here set all routes 
-$app->map('/writesketch', 'writesketchController')->via('POST');
+$app->map('/compilesketch', 'compilesketchController')->via('POST');
 
 //function not found
 $app->notFound(function () use ($app) 
@@ -106,7 +106,7 @@ function toGreek($value)
 #===========================================================================================
  
 
-function writesketchController()
+function compilesketchController()
 {
     global $app;
     $params = loadParameters();
@@ -114,8 +114,8 @@ function writesketchController()
     switch ( strtoupper( $app->request()->getMethod() ) )
     {
         case 'POST': 
-            $result = writesketch(
-                $params["binfile"]       
+            $result = compilesketch(
+                $params["srcfile"]       
             );      
             break;
     }
