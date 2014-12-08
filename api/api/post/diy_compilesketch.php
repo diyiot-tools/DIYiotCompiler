@@ -9,6 +9,10 @@ function compilesketch($payload,$storage){
     $result->method = $app->request()->getMethod();
     $params = loadParameters();
     $srcfile = urldecode(base64_decode(urldecode($params["srcfile"])));
+    $srclib = array();
+    foreach($_POST['srclib'] as $curName => $curFile) {
+        $srclib[$curName] = urldecode(base64_decode(urldecode($curFile)));
+    }
     $compiler = $params["compiler"];
     $filename = $params["filename"];
 
@@ -50,6 +54,10 @@ function compilesketch($payload,$storage){
             $output = shell_exec("cd ".$tmpfile."; /var/www/html/tools/build-tools/ino/ino/bin/ino init 2>&1; echo $?");
             if(trim($output) != '0') { throw new \Exception('Could not init project dir: '.trim($output)); }
             file_put_contents($tmpfile.'/src/sketch.ino', $srcfile);
+            foreach($srclib as $curName => $curFile) {
+                if(!is_dir(dirname($tmpfile.'/lib/'.$curName))) { mkdir(dirname($tmpfile.'/lib/'.$curName), 0777, true); }
+                file_put_contents($tmpfile.'/lib/'.$curName, $curFile);
+            }
             $output = shell_exec("cd ".$tmpfile."; /var/www/html/tools/build-tools/ino/ino/bin/ino build 2>&1; echo $?");
             $outputParts = explode("\n", $output);
             if($outputParts[count($outputParts)-2] != '0') {
