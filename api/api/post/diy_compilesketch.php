@@ -24,7 +24,7 @@ function compilesketch($payload,$storage){
             putenv("PATH=" .getenv('PATH'). ':/var/www/html/tools/build-tools/avr-gcc/src/x64/avr/bin');
             $output = shell_exec("/var/www/html/tools/build-tools/avr-gcc/compile.sh ".$tmpfile.' 2>&1; echo $?');
             if($output != null && file_exists($tmpfile.'.hex')) {
-                $result["output"]=  $output;
+                //$result["output"]=  $output; // Don't show output when there were no errors
                 $result["hex"]= base64_encode(file_get_contents($tmpfile.'.hex'));
                 $result["message"] = "[".$result["method"]."][".$result["function"]."]: NoErrors";
                 $result["status"] = "200";
@@ -65,7 +65,7 @@ function compilesketch($payload,$storage){
                 throw new \Exception('Compilation failed');
             }
             if($outputParts[count($outputParts)-2] == '0' && file_exists($tmpfile.'/.build/uno/firmware.hex')) {
-                $result["output"]=  $output;
+                //$result["output"]=  $output; // Don't show output when there were no errors
                 $result["hex"]= base64_encode(file_get_contents($tmpfile.'/.build/uno/firmware.hex'));
                 $result["message"] = "[".$result["method"]."][".$result["function"]."]: NoErrors";
                 $result["status"] = "200";
