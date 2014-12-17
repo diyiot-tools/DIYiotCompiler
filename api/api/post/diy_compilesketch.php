@@ -1,4 +1,20 @@
 <?php
+function zipSketch($folder) {
+    $tmpzip = tempnam('/tmp', 'avrsrczip'.md5($folder)).'.tgz';
+    $output = shell_exec("tar -czvf ".$tmpzip." ".$folder.' 2>&1; echo $?');
+    $outputParts = explode("\n", $output);
+    if($outputParts[count($outputParts)-2] != '0') {
+        $result["output"]=  $output;
+        throw new \Exception('Could not zip project dir: '.trim($output));
+    }
+    if(!file_exists($tmpzip)) {
+        throw new \Exception('Zip file could not be created: '.trim($tmpzip));
+    }
+    $content = file_get_contents($tmpzip);
+    @unlink($tmpzip);
+    return base64_encode($content);
+}
+
 function compilesketch($payload,$storage){
     global $app;
     $result["controller"] = __FUNCTION__;
@@ -25,15 +41,16 @@ function compilesketch($payload,$storage){
             $output = shell_exec("/var/www/html/tools/build-tools/avr-gcc/compile.sh ".$tmpfile.' 2>&1; echo $?');
             if($output != null && file_exists($tmpfile.'.hex')) {
                 //$result["output"]=  $output; // Don't show output when there were no errors
-                $result["hex"]= base64_encode(file_get_contents($tmpfile.'.hex'));
+                $result["zip" ]= zipSketch($tmpfile);
+                $result["hex"] = base64_encode(file_get_contents($tmpfile.'.hex'));
                 $result["message"] = "[".$result["method"]."][".$result["function"]."]: NoErrors";
                 $result["status"] = "200";
-                $result["result"]=  "ok";
+                $result["result"] =  "ok";
             } else {
-                $result["output"]=  $output;
+                $result["output"] =  $output;
                 $result["message"] = "[".$result["method"]."][".$result["function"]."]: Error";
                 $result["status"] = "500";
-                $result["result"]=  "error";
+                $result["result"] =  "error";
             }
         } catch (Exception $e) {
             $result["output"] = $e->getCode();
@@ -58,6 +75,7 @@ function compilesketch($payload,$storage){
                 if(!is_dir(dirname($tmpfile.'/lib/'.$curName))) { mkdir(dirname($tmpfile.'/lib/'.$curName), 0777, true); }
                 file_put_contents($tmpfile.'/lib/'.$curName, $curFile);
             }
+            $zipSketch = zipSketch($tmpfile);
             $output = shell_exec("cd ".$tmpfile."; /var/www/html/tools/build-tools/ino/ino/bin/ino build 2>&1; echo $?");
             $outputParts = explode("\n", $output);
             if($outputParts[count($outputParts)-2] != '0') {
@@ -66,25 +84,26 @@ function compilesketch($payload,$storage){
             }
             if($outputParts[count($outputParts)-2] == '0' && file_exists($tmpfile.'/.build/uno/firmware.hex')) {
                 //$result["output"]=  $output; // Don't show output when there were no errors
-                $result["hex"]= base64_encode(file_get_contents($tmpfile.'/.build/uno/firmware.hex'));
+                $result["zip"] = $zipSketch;
+                $result["hex"] = base64_encode(file_get_contents($tmpfile.'/.build/uno/firmware.hex'));
                 $result["message"] = "[".$result["method"]."][".$result["function"]."]: NoErrors";
                 $result["status"] = "200";
-                $result["result"]=  "ok";
+                $result["result"] =  "ok";
             } else {
-                $result["output"]=  $output;
+                $result["output"] =  $output;
                 throw new \Exception('Compilation failed');
             }
         } catch (Exception $e) {
             $result["status"] = "500";
             $result["message"] = "[".$result["method"]."][".$result["function"]."]:".$e->getMessage();
-            $result["result"]=  "error";
+            $result["result"] =  "error";
         }
         @unlink($tmpfile);
         @unlink($tmpfile.'.hex');
     } else {
         $result["message"] = "[".$result["method"]."][".$result["function"]."]: UnsupportedCompiler";
         $result["status"] = "500";
-        $result["result"]=  "error";
+        $result["result"] =  "error";
     }
 
     return $result;
